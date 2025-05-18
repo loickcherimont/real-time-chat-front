@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import { socket } from './socket'
 
 type Message = {
@@ -16,6 +16,7 @@ export default function Home() {
     const input = ev.target as HTMLInputElement
     setMsg(input.value)
   }
+  // 1. Send to server (emit)
   const handleSubmitMessage = () => {
     const newMessage: Message = {
       id: Date.now(),
@@ -23,19 +24,26 @@ export default function Home() {
     }
 
     socket.emit('message', { data: newMessage });
+    setMsg('');
   }
 
-  socket.on('message', ({ data }) => {
-    setMsgs([...msgs, data])
-    setMsg('')
-  })
+
+  // 4. Receive from server
+  useEffect(() => {
+    socket.on('message', ({ data }) => {
+      setMsgs([...msgs, data])
+    })
+    return () => {
+      console.log('Something from useEffect');
+    }
+  }, []);
 
   return (
     <div>
       <div>
         <ul id='messages'>
-          {msgs?.map((msg: Message) => (
-            <li key={msg.id}>{msg.content}</li>
+          {msgs.map((msg: Message, index) => (
+            <li key={index}>{msg.content}</li>
           ))}
         </ul>
       </div>
@@ -47,6 +55,8 @@ export default function Home() {
           id='message'
           value={msg}
           onChange={handleChange}
+          // user submits its message using Enter key
+          onKeyDown={(ev) => (ev.key === 'Enter' ? handleSubmitMessage():null)}
           className='bg-slate-500'
         />
         <button onClick={handleSubmitMessage}
